@@ -208,6 +208,37 @@ export default async function ReportPage({ params }: ReportPageProps) {
           </div>
         </div>
 
+        {/* ── Methodology & Limitations ── */}
+        <div className="glass-panel rounded-2xl border border-border p-6 mb-6">
+          <h2 className="text-base font-bold text-foreground mb-1 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            Methodology & Limitations
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+            TrueSight uses an AI-assisted analysis engine that evaluates available signals to provide an assessment of authenticity. It is not a definitive forensic proof.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-muted/20 border border-border rounded-xl p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Visual & Audio</h3>
+              <p className="text-xs text-muted-foreground">Scans for artifacts, inconsistencies, and patterns commonly introduced by generative AI or manual manipulation.</p>
+            </div>
+            <div className="bg-muted/20 border border-border rounded-xl p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Metadata</h3>
+              <p className="text-xs text-muted-foreground">Examines EXIF, structural metadata, and provenance history, checking for anomalies or missing standard data.</p>
+            </div>
+            <div className="bg-muted/20 border border-border rounded-xl p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Consistency</h3>
+              <p className="text-xs text-muted-foreground">Cross-references visual, text, and audio components to ensure alignment with expected physical and semantic rules.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 bg-warning/5 border border-warning/15 rounded-xl p-4">
+            <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <strong>Limitation:</strong> Sophisticated manipulation techniques may evade detection, and benign edits (e.g., cropping, compression) may occasionally trigger false warnings. Always combine this assessment with critical judgment.
+            </p>
+          </div>
+        </div>
+
         {/* ── Actions (client component for clipboard) ── */}
         <ReportActions reportId={id} />
 

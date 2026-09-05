@@ -3,7 +3,7 @@
 
 export type SignalLevel = "strong" | "low" | "moderate" | "high" | "inconclusive" | "weak";
 export type Verdict = "authentic" | "suspicious" | "manipulated";
-export type DemoKey = "authentic" | "manipulated" | "suspicious" | "audio-voice" | "video-news";
+export type DemoKey = "authentic" | "manipulated" | "suspicious" | "audio-voice" | "video-news" | "url-article";
 
 export interface Signal {
   label: string;
@@ -130,6 +130,26 @@ export const DEMO_RESULTS: Record<DemoKey, DemoResult> = {
       { label: "Source Verification",        level: "inconclusive", explanation: "The original video source could not be independently verified." },
     ],
   },
+
+  "url-article": {
+    id: "demo-006",
+    demoKey: "url-article",
+    score: 45,
+    verdict: "suspicious",
+    verdictLabel: "SUSPICIOUS",
+    confidence: "Medium",
+    filename: "https://example-news-source.com/article",
+    mediaType: "URL",
+    date: "September 5, 2026",
+    summary:
+      "The linked content contains mixed signals. The text and embedded media show inconsistencies often found in unreliable or synthetically generated content. Furthermore, the domain reputation and available metadata provide limited confidence in the source's authenticity. AI-assisted assessment based on available signals.",
+    signals: [
+      { label: "Content Authenticity",  level: "moderate",     explanation: "Text structure and media elements exhibit patterns sometimes associated with synthetic generation." },
+      { label: "Source Reputation",     level: "weak",         explanation: "The domain has limited verifiable history or exhibits patterns common to unreliable sources." },
+      { label: "Metadata Integrity",    level: "inconclusive", explanation: "Page metadata is sparse or inconsistent with standard journalistic practices." },
+      { label: "Visual/Text Consistency",level: "moderate",    explanation: "Embedded images or videos show some inconsistencies with the accompanying text." },
+    ],
+  },
 };
 
 // Map report URL IDs to demo keys
@@ -139,6 +159,7 @@ export const REPORT_ID_MAP: Record<string, DemoKey> = {
   "demo-003": "suspicious",
   "demo-004": "audio-voice",
   "demo-005": "video-news",
+  "demo-006": "url-article",
 };
 
 export function getReportById(id: string): DemoResult {

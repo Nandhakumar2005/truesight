@@ -86,12 +86,12 @@ export default function DashboardPage() {
               trend="24%"
             />
             <StatCard
-              label="Reports Generated"
-              value={12}
-              icon={FileText}
-              iconColor="text-secondary"
-              iconBg="bg-secondary/10"
-              trend="This month"
+              label="Average Score"
+              value="68/100"
+              icon={Activity}
+              iconColor="text-primary"
+              iconBg="bg-primary/10"
+              trend="Last 30 days"
             />
           </div>
         </section>

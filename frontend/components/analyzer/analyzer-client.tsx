@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
   Mic,
   Video,
+  Link2,
   X,
   ScanSearch,
   CheckCircle2,
@@ -37,7 +38,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MediaTab = "image" | "audio" | "video";
+type MediaTab = "image" | "audio" | "video" | "url";
 
 const SCAN_STAGES: Record<MediaTab, string[]> = {
   image: [
@@ -62,6 +63,13 @@ const SCAN_STAGES: Record<MediaTab, string[]> = {
     "Assessing audio/visual consistency",
     "Generating authenticity assessment",
   ],
+  url: [
+    "Fetching URL content",
+    "Extracting media and text",
+    "Analyzing text structure",
+    "Assessing image/text consistency",
+    "Generating authenticity assessment",
+  ],
 };
 
 // Default demo key when user uploads a real file (no demo selected)
@@ -69,6 +77,7 @@ const DEFAULT_DEMO_KEY: Record<MediaTab, DemoKey> = {
   image: "authentic",
   audio: "audio-voice",
   video: "video-news",
+  url: "url-article",
 };
 
 // Accepted MIME type groups
@@ -76,12 +85,14 @@ const ACCEPTED_TYPES: Record<MediaTab, string[]> = {
   image: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/svg+xml"],
   audio: ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/ogg", "audio/mp4", "audio/m4a", "audio/aac", "audio/flac"],
   video: ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi"],
+  url: [],
 };
 
 const ACCEPT_ATTR: Record<MediaTab, string> = {
   image: "image/*",
   audio: "audio/*",
   video: "video/*",
+  url: "",
 };
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100 MB
@@ -141,6 +152,15 @@ const DEMO_CASES: Array<{
     gradient: "from-rose-500/20 to-pink-500/10",
     icon: Video,
     iconColor: "text-rose-400",
+  },
+  {
+    key: "url-article",
+    tab: "url",
+    title: "Suspicious News Article",
+    description: "A URL pointing to an article with mixed authenticity signals and potentially synthetic content.",
+    gradient: "from-amber-500/20 to-yellow-500/10",
+    icon: Link2,
+    iconColor: "text-amber-400",
   },
 ];
 
@@ -308,12 +328,14 @@ function AnalysisResult({
   imageUrl,
   audioUrl,
   videoUrl,
+  urlValue,
   onReset,
 }: {
   result: DemoResult;
   imageUrl: string | null;
   audioUrl: string | null;
   videoUrl: string | null;
+  urlValue: string | null;
   onReset: () => void;
 }) {
   const vs = VERDICT_STYLES[result.verdict];
@@ -392,6 +414,15 @@ function AnalysisResult({
                 </video>
               </div>
             )}
+            {urlValue && (
+              <div className="mb-4 rounded-xl border border-border bg-muted/20 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Link2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm font-semibold text-foreground">Analyzed URL</span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{urlValue}</p>
+              </div>
+            )}
 
             <div className="bg-muted/20 border border-border rounded-xl p-4 mb-3">
               <p className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
@@ -413,10 +444,27 @@ function AnalysisResult({
         <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
           Signal Breakdown
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           {result.signals.map((signal, i) => (
             <SignalRow key={signal.label} signal={signal} index={i} />
           ))}
+        </div>
+
+        {/* Methodology / Disclaimer */}
+        <div className="bg-card border border-border rounded-xl p-5 mb-6 shadow-sm">
+          <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            Why should I trust this result?
+          </h4>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+            TrueSight considers available signals such as visual/audio characteristics, metadata, consistency checks, and source information. This is an <strong>AI-assisted assessment</strong>, not a definitive guarantee of authenticity.
+          </p>
+          <div className="flex gap-2 bg-warning/5 border border-warning/15 rounded-xl p-3">
+            <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Always apply critical judgment before acting on or sharing sensitive media.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -473,12 +521,14 @@ export function AnalyzerClient() {
   const [activeResult, setActiveResult] = useState<DemoResult | null>(null);
   const [activeDemoKey, setActiveDemoKey] = useState<DemoKey | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const TABS: { key: MediaTab; label: string; icon: React.ElementType }[] = [
     { key: "image", label: "Image", icon: ImageIcon },
     { key: "audio", label: "Audio", icon: Mic },
     { key: "video", label: "Video", icon: Video },
+    { key: "url", label: "URL", icon: Link2 },
   ];
 
   // ── helpers ──
@@ -491,6 +541,7 @@ export function AnalyzerClient() {
     revokePreview();
     setFile(null);
     setPreviewUrl(null);
+    setUrlInput("");
     setActiveDemoKey(null);
     setPhase("idle");
     setActiveResult(null);
@@ -559,7 +610,15 @@ export function AnalyzerClient() {
   };
 
   const handleAnalyze = () => {
-    if (!file && !activeDemoKey) return;
+    if (!file && !activeDemoKey && !urlInput.trim()) return;
+    if (tab === "url" && urlInput.trim() && !activeDemoKey) {
+      if (!urlInput.startsWith("http://") && !urlInput.startsWith("https://")) {
+        setFileError("Please enter a valid URL starting with http:// or https://");
+        return;
+      }
+      setMediaKind("url");
+      setFileError(null);
+    }
     setPhase("scanning");
   };
 
@@ -574,12 +633,13 @@ export function AnalyzerClient() {
     setPhase("result");
   }, [activeDemoKey, mediaKind]);
 
-  const hasMedia = file !== null || activeDemoKey !== null;
+  const hasMedia = file !== null || activeDemoKey !== null || urlInput.trim() !== "";
 
   // Derived URLs for result
   const imageUrl = mediaKind === "image" ? previewUrl : null;
   const audioUrl = mediaKind === "audio" ? previewUrl : null;
   const videoUrl = mediaKind === "video" ? previewUrl : null;
+  const activeUrlValue = mediaKind === "url" ? urlInput : null;
 
   // Current stages for ScanAnimation
   const currentStages = SCAN_STAGES[mediaKind];
@@ -807,6 +867,48 @@ export function AnalyzerClient() {
               </div>
             )}
 
+            {/* ── URL input zone ── */}
+            {tab === "url" && (
+              <div className="relative rounded-2xl border border-border bg-card p-6 min-h-[260px] flex items-center justify-center">
+                {!activeDemoKey ? (
+                  <div className="w-full max-w-md mx-auto text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl border bg-muted/50 border-border flex items-center justify-center mx-auto mb-4">
+                      <Link2 className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <p className="text-base font-semibold text-foreground">Analyze a URL</p>
+                    <p className="text-sm text-muted-foreground mb-4">Paste a link to an article, image, or video.</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        placeholder="https://example.com/media"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        className="flex-grow h-11 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors text-foreground"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && urlInput.trim()) {
+                            handleAnalyze();
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full max-w-md mx-auto text-center space-y-4">
+                     <div className="flex items-center justify-center gap-3 bg-muted/30 p-4 rounded-xl border border-border">
+                        <Link2 className="w-5 h-5 text-primary" />
+                        <span className="text-sm font-medium text-foreground truncate">Demo URL Selected</span>
+                     </div>
+                     <button
+                        onClick={clearMedia}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                     >
+                        Clear selection
+                     </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* File error banner */}
             {fileError && (
               <motion.div
@@ -908,6 +1010,14 @@ export function AnalyzerClient() {
                 })}
               </div>
             </div>
+
+            {/* Privacy Notice */}
+            <div className="flex gap-2 items-start justify-center mt-6 p-4 bg-card border border-border rounded-xl shadow-sm">
+              <ShieldCheck className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl text-center">
+                <strong>Privacy & Security:</strong> Media is handled securely. API keys are kept server-side. However, please avoid uploading highly sensitive or private material. Results are AI-assisted assessments and not definitive proof.
+              </p>
+            </div>
           </motion.div>
         )}
 
@@ -926,6 +1036,7 @@ export function AnalyzerClient() {
               imageUrl={imageUrl}
               audioUrl={audioUrl}
               videoUrl={videoUrl}
+              urlValue={activeUrlValue}
               onReset={clearMedia}
             />
           </motion.div>
