@@ -1,0 +1,31 @@
+# Render deployment configuration for TrueSight backend
+# https://render.com/docs/render-yaml-reference
+#
+# Usage:
+#   1. Push this file to your repository root.
+#   2. Create a new Blueprint in the Render dashboard and point it at your repo.
+#   3. Set the secret environment variables in the Render dashboard
+#      (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY).
+#   4. After your Vercel deployment is live, add the Vercel URL to FRONTEND_URL.
+
+services:
+  - type: web
+    name: truesight-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false          # Set this in the Render dashboard — do NOT put real value here
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false          # Set this in the Render dashboard — do NOT put real value here
+      - key: GEMINI_API_KEY
+        sync: false          # Set this in the Render dashboard — do NOT put real value here
+      - key: FRONTEND_URL
+        sync: false          # Set to your Vercel URL, e.g. https://truesight.vercel.app
+      - key: MAX_UPLOAD_SIZE_BYTES
+        value: "52428800"
